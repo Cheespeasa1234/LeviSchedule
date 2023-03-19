@@ -8,9 +8,11 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Paint;
 import java.awt.Toolkit;
+import java.awt.GraphicsEnvironment;
+import java.awt.FontFormatException;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.Serializable;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.temporal.ChronoField;
@@ -28,10 +30,8 @@ import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
-public class LeviSchedule extends JPanel implements Serializable {
+public class LeviSchedule extends JPanel {
 
-    public static final long serialVersionUID = "You're Mother".hashCode();
-    
     public static final Dimension screenDimension = Toolkit.getDefaultToolkit().getScreenSize();
     public static final int screenW = (int) screenDimension.getWidth();
     public static final int screenH = (int) screenDimension.getHeight();
@@ -75,12 +75,12 @@ public class LeviSchedule extends JPanel implements Serializable {
         JPanel settingsGroup = new JPanel();
         settingsGroup.setLayout(new BorderLayout());
         JComboBox<String> switchSchedule = new JComboBox<String>(daysOfWeek);
-        switchSchedule.setSelectedItem(daysOfWeek[lastDate-1]);
+        switchSchedule.setSelectedItem(daysOfWeek[lastDate - 1]);
         switchSchedule.addActionListener(event -> {
             String chosenSchedule = (String) switchSchedule.getSelectedItem();
             List<String> daysOfWeekAL = Arrays.asList(daysOfWeek);
             int listIndexChosen = daysOfWeekAL.indexOf(chosenSchedule);
-            if(listIndexChosen + 1 != lastDate) {
+            if (listIndexChosen + 1 != lastDate) {
                 viewing = daysOfWeek[listIndexChosen];
                 loadToday(listIndexChosen + 1);
             } else {
@@ -111,10 +111,25 @@ public class LeviSchedule extends JPanel implements Serializable {
 
     private void loadAssets() {
         // load fonts
-        font = new Font(fontName, Font.PLAIN, 16);
-        fontBold = new Font(fontName, Font.BOLD, 16);
-        fontSmall = new Font(fontName, Font.PLAIN, 10);
-        fontMedium = new Font(fontName, Font.PLAIN, 12);
+        try {
+            //create the font to use. Specify the size!
+            File fontSource = new File("src/fonts/CascadiaCode.ttf");
+            System.out.println(fontSource.getAbsolutePath());
+            Font loadedFont = Font.createFont(Font.TRUETYPE_FONT, fontSource).deriveFont(12f);
+            font = loadedFont.deriveFont(16);
+            fontBold = font.deriveFont(Font.BOLD);
+            fontSmall = loadedFont.deriveFont(10);
+            fontMedium = loadedFont.deriveFont(12);
+            
+            GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+            //register the font
+            ge.registerFont(font);
+            ge.registerFont(fontBold);
+            ge.registerFont(fontSmall);
+            ge.registerFont(fontMedium);
+        } catch(IOException|FontFormatException e) {
+            e.printStackTrace();
+        } 
     }
 
     private void loadToday(int currentDate) {
@@ -188,22 +203,22 @@ public class LeviSchedule extends JPanel implements Serializable {
         g2.setColor(Color.BLACK);
 
         Date now = new Date();
-        
+
         int infoOffset = 25;
 
         String timeStamp = new SimpleDateFormat("HH:mm.ss").format(now);
         centerText(timeStamp, g2, infoOffset);
-        
+
         String dateStamp = new SimpleDateFormat("MM/dd/yyyy").format(now);
         centerText(dateStamp, g2, infoOffset + 20);
-        
-        if(!viewing.equals("")) {
+
+        if (!viewing.equals("")) {
             g2.setFont(fontMedium);
             g2.setColor(Color.RED);
             centerText("Viewing: " + viewing, g2, infoOffset + 60);
             g2.setColor(Color.BLACK);
         }
-        
+
         g2.setFont(fontBold);
         String weekStamp = daysOfWeek[lastDate - 1];
         centerText(weekStamp, g2, infoOffset + 40);
