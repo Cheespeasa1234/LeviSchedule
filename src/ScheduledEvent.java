@@ -1,8 +1,5 @@
 import java.awt.Color;
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.util.HashMap;
-import java.util.Scanner;
 
 public class ScheduledEvent {
     // maps time "HH:mm" >> event "Event"

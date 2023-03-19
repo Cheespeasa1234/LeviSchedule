@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.time.LocalDate;
 import java.time.temporal.ChronoField;
@@ -33,14 +34,24 @@ import java.awt.Toolkit;
 
 public class LeviSchedule extends JPanel implements MouseListener, MouseMotionListener, KeyListener {
 
-    public static final int PREF_W = 150;
-    public static final int PREF_H = 900;
-
-    private Font timeFont = new Font("Andale Mono", Font.PLAIN, 16);
-    private Font timeFontSmall = new Font("Andale Mono", Font.PLAIN, 10);
     
+    public static final Dimension screenDimension = Toolkit.getDefaultToolkit().getScreenSize();
+    public static final int screenW = (int) screenDimension.getWidth();
+    public static final int screenH = (int) screenDimension.getHeight();
+    
+    public static final int PREF_W = 150;
+    public static final int PREF_H = screenH + 100;
+    
+    private String fontName = "Cascadia Mono";
+    private Font font;
+    private Font fontBold;
+    private Font fontSmall;
+    
+    private final String[] daysOfWeek = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+
     private ArrayList<ScheduledEvent> events = new ArrayList<ScheduledEvent>();
     private HashMap<String, String> variables = new HashMap<String, String>();
+    private String typeOfWeek = "default";
 
     private double ratioElapsed = 0;
     private double percentElapsed = 0;
@@ -57,11 +68,26 @@ public class LeviSchedule extends JPanel implements MouseListener, MouseMotionLi
         this.addKeyListener(this);
         
         timer.start();
+        int currentDate = LocalDate.now().getDayOfWeek().get(ChronoField.DAY_OF_WEEK);
         
+        font = new Font(fontName, Font.PLAIN, 16);
+        fontBold = new Font(fontName, Font.BOLD, 16);
+        fontSmall = new Font(fontName, Font.PLAIN, 10);
+
         // read by line
         loadcmap("schedules/classes.cmap");
-        System.out.println(variables);
-        loadSchedule("schedules/monday.sched");
+        loadToday(currentDate);
+        loadAssets();
+    }
+
+    private void loadAssets() {
+        // load fonts
+
+    }
+
+    private void loadToday(int currentDate) {
+        String dayToGet = daysOfWeek[currentDate-1].substring(0, 3).toLowerCase();
+        loadSchedule("schedules/" + typeOfWeek + "/" + dayToGet + ".sched");
     }
 
     private void loadcmap(String path) {
@@ -77,6 +103,7 @@ public class LeviSchedule extends JPanel implements MouseListener, MouseMotionLi
     }
 
     private void loadSchedule(String path) {
+        events.clear();
         try {
             Scanner schedReader = new Scanner(new File(path));
             String line = schedReader.nextLine();
@@ -100,9 +127,9 @@ public class LeviSchedule extends JPanel implements MouseListener, MouseMotionLi
             ratioElapsed = percentElapsed * scheduleDisplayH;
 
             int currentDate = LocalDate.now().getDayOfWeek().get(ChronoField.DAY_OF_WEEK);
-            if(lastDate != currentDate)
-                System.out.println("Cur" + currentDate);
-                System.out.println("Last" + lastDate);
+            if(lastDate != currentDate) {
+                loadToday(currentDate);
+            }
         }
     });
 
@@ -111,14 +138,24 @@ public class LeviSchedule extends JPanel implements MouseListener, MouseMotionLi
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
 
-        g2.setFont(timeFont);
+        g2.setFont(font);
         
-        String timeStamp = new SimpleDateFormat("HH:mm.ss").format(new java.util.Date());
-        int width = g2.getFontMetrics().stringWidth("  .  .  ");
+        Date now = new Date();
+        String timeStamp = new SimpleDateFormat("HH:mm.ss").format(now);
+        int timeStampWidth = g2.getFontMetrics().stringWidth(timeStamp);
+        g2.drawString(timeStamp, PREF_W / 2 - timeStampWidth / 2, 20);
+        
+        String dateStamp = new SimpleDateFormat("MM/dd/yyyy").format(now);
+        int dateStampWidth = g2.getFontMetrics().stringWidth(dateStamp);
+        g2.drawString(dateStamp, PREF_W / 2 - dateStampWidth / 2, 40);
+        
+        g2.setFont(fontBold);
+        String weekStamp = daysOfWeek[lastDate-1];
+        int weekStampWidth = g2.getFontMetrics().stringWidth(weekStamp);
+        g2.drawString(weekStamp, PREF_W / 2 - weekStampWidth / 2, 80);
 
-        g2.drawString(timeStamp, PREF_W / 2 - width / 2, 20);
         
-        g2.setFont(timeFontSmall);
+        g2.setFont(fontSmall);
         for(ScheduledEvent ev: events) {
             g2.setColor(ev.c);
             g2.fillRect(0, ev.start + scheduleDisplayY, PREF_W, ev.end - (ev.start));
@@ -182,7 +219,7 @@ public class LeviSchedule extends JPanel implements MouseListener, MouseMotionLi
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
         frame.setAlwaysOnTop(true);
-        frame.setLocation((int) Toolkit.getDefaultToolkit().getScreenSize().getWidth()-frame.getWidth(), (int) Toolkit.getDefaultToolkit().getScreenSize().getHeight()-frame.getHeight());
+        frame.setLocation(screenW-frame.getWidth(), screenH-frame.getHeight());
     }
 
     public static void main(String[] args) {
