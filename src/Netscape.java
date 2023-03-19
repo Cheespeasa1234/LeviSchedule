@@ -1,3 +1,7 @@
+// Written by Nathaniel Levison, March 2023
+// License for this file at /LICENSE.txt
+
+// Import Dependencies
 import java.awt.Color;
 import java.util.Random;
 public class Netscape {
