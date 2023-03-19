@@ -42,6 +42,7 @@ public class LeviSchedule extends JPanel implements Serializable {
     private String fontName = "Cascadia Mono";
     private Font font;
     private Font fontBold;
+    private Font fontMedium;
     private Font fontSmall;
 
     private Color color1 = new Color(0, 201, 195, 130);
@@ -72,16 +73,16 @@ public class LeviSchedule extends JPanel implements Serializable {
         this.setLayout(lay);
 
         JPanel settingsGroup = new JPanel();
-        
+        settingsGroup.setLayout(new BorderLayout());
         JComboBox<String> switchSchedule = new JComboBox<String>(daysOfWeek);
         switchSchedule.setSelectedItem(daysOfWeek[lastDate-1]);
         switchSchedule.addActionListener(event -> {
             String chosenSchedule = (String) switchSchedule.getSelectedItem();
             List<String> daysOfWeekAL = Arrays.asList(daysOfWeek);
-            int listIndexChosen = daysOfWeekAL.indexOf(chosenSchedule) + 1;
-            if(listIndexChosen != lastDate) {
+            int listIndexChosen = daysOfWeekAL.indexOf(chosenSchedule);
+            if(listIndexChosen + 1 != lastDate) {
                 viewing = daysOfWeek[listIndexChosen];
-                loadToday(listIndexChosen);
+                loadToday(listIndexChosen + 1);
             } else {
                 viewing = "";
             }
@@ -113,6 +114,7 @@ public class LeviSchedule extends JPanel implements Serializable {
         font = new Font(fontName, Font.PLAIN, 16);
         fontBold = new Font(fontName, Font.BOLD, 16);
         fontSmall = new Font(fontName, Font.PLAIN, 10);
+        fontMedium = new Font(fontName, Font.PLAIN, 12);
     }
 
     private void loadToday(int currentDate) {
@@ -169,7 +171,7 @@ public class LeviSchedule extends JPanel implements Serializable {
         g2.drawString(text, PREF_W / 2 - g2.getFontMetrics().stringWidth(text) / 2, height);
     }
 
-    public void paintComponent(Graphics g) {
+    protected void paintComponent(Graphics g) {
 
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
@@ -196,6 +198,7 @@ public class LeviSchedule extends JPanel implements Serializable {
         centerText(dateStamp, g2, infoOffset + 20);
         
         if(!viewing.equals("")) {
+            g2.setFont(fontMedium);
             g2.setColor(Color.RED);
             centerText("Viewing: " + viewing, g2, infoOffset + 60);
             g2.setColor(Color.BLACK);
