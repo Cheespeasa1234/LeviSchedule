@@ -28,7 +28,6 @@ public class ScheduledEvent {
 
     // constructor
     public ScheduledEvent(String rawData, int displayH, HashMap<String, String> vars) {
-
         // if given var:
         if (rawData.indexOf("$") > -1) {
             // get the variable called
@@ -58,7 +57,7 @@ public class ScheduledEvent {
 
         // set the name of the event
         String eventName = rawData.substring(rawData.indexOf("\""));
-        this.event = eventName;
+        this.event = eventName.substring(0, eventName.length() - 1);
 
         // set the color of the event
         this.c = new Color(Integer.valueOf(tokens[2]), Integer.valueOf(tokens[3]), Integer.valueOf(tokens[4]), Integer.valueOf(tokens[5]));
@@ -69,5 +68,13 @@ public class ScheduledEvent {
         // set the display location of the event
         this.start = (int) (startPercent * displayH);
         this.end = (int) (endPercent * displayH);
+    }
+
+    public void paint(java.awt.Graphics2D g2, int scheduleDisplayY, int PREF_W) {
+        g2.setColor(this.c);
+        g2.fillRect(0, this.start + scheduleDisplayY, PREF_W, this.end - (this.start));
+        g2.setColor(Color.BLACK);
+        if (this.isSpan)
+            g2.drawString(this.event.substring(1), 10, 5 + scheduleDisplayY + this.start + (this.end - this.start) / 2);
     }
 }

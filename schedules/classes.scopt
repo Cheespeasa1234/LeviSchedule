@@ -1,11 +1,15 @@
-1 = 255 0 0 100 "Algebra II
-2 = 235 125 52 100 "Pascack Period
-3 = 52 198 235 100 "Honors Spanish III
-4 = 52 98 235 100 "Honors US History I
-L = 0 161 27 100 "Lunch
-5 = 161 0 56 100 "Physical Education
-6 = 169 77 255 100 "AP Computer Science
-7 = 10 191 79 100 "Honors Chemistry
-8 = 232 229 44 100 "Honors English II
-S = 0 0 0 255 "School Start
+1 = 255 0 0 100 "Algebra II"
+2 = 235 125 52 100 "Pascack Period"
+3 = 52 198 235 100 "Honors Spanish III"
+4 = 52 98 235 100 "Honors US History I"
+L = 0 161 27 100 "Lunch"
+5 = 161 0 56 100 "Physical Education"
+6 = 169 77 255 100 "AP Computer Science"
+7 = 10 191 79 100 "Honors Chemistry"
+8 = 232 229 44 100 "Honors English II"
+S = 0 0 0 255 "School Start"
+CODECLUB = 20 20 20 100 "Coding Club"
+DEBATECLUB = 50 70 100 100 "Debate Club"
+TUTOR = 10 30 150 100 "Math Tutor"
+BCHSJS = 245 66 224 100 "BCHSJS"
 END

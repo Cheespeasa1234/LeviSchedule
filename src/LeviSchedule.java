@@ -14,6 +14,8 @@ import java.awt.Paint;
 import java.awt.Toolkit;
 import java.awt.GraphicsEnvironment;
 import java.awt.FontFormatException;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -30,9 +32,16 @@ import java.util.Scanner;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+
+import javax.swing.border.Border;
+import javax.swing.border.EmptyBorder;
 
 public class LeviSchedule extends JPanel {
 
@@ -92,23 +101,25 @@ public class LeviSchedule extends JPanel {
         // Define the settings panel
         JPanel settingsGroup = new JPanel();
         settingsGroup.setLayout(new BorderLayout());
-
         // Dropdown for the choosing of schedule
         JComboBox<String> switchSchedule = new JComboBox<String>(daysOfWeek);
-        switchSchedule.setSelectedItem(daysOfWeek[lastDate - 1]);
+        switchSchedule.setSelectedItem(daysOfWeek[lastDate < 7 ? lastDate : 0]);
         switchSchedule.addActionListener(event -> {
             String chosenSchedule = (String) switchSchedule.getSelectedItem();
             List<String> daysOfWeekAL = Arrays.asList(daysOfWeek);
             int listIndexChosen = daysOfWeekAL.indexOf(chosenSchedule);
 
-            loadToday(listIndexChosen + 1);
-            if (listIndexChosen + 1 != lastDate) {
+            loadToday(listIndexChosen < 7 ? listIndexChosen : 0);
+            if (listIndexChosen != lastDate) {
                 viewing = daysOfWeek[listIndexChosen];
             } else {
                 viewing = "";
             }
         });
-        settingsGroup.add(switchSchedule, BorderLayout.SOUTH);
+        JLabel switchScheduleLabel = new JLabel("Set opened schedule");
+        switchScheduleLabel.setBorder(new EmptyBorder(32, 32, 32, 32));
+        settingsGroup.add(switchScheduleLabel);
+        settingsGroup.add(switchSchedule);
         settingsGroup.setVisible(false);
 
         // Button for toggling settings
@@ -143,18 +154,15 @@ public class LeviSchedule extends JPanel {
             Font loadedFont = Font.createFont(Font.TRUETYPE_FONT, fontSource).deriveFont(12f);
 
             // derive the fonts for use
-            font = loadedFont.deriveFont(16);
-            fontBold = font.deriveFont(Font.BOLD);
-            fontSmall = loadedFont.deriveFont(10);
-            fontMedium = loadedFont.deriveFont(12);
-
+            
             // register the fonts
             GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-            ge.registerFont(font);
-            ge.registerFont(fontBold);
-            ge.registerFont(fontSmall);
-            ge.registerFont(fontMedium);
+            ge.registerFont(loadedFont);
 
+            font = new Font("Cascadia Code", Font.PLAIN, 16);
+            fontBold = new Font("Cascadia Code", Font.PLAIN, 16);
+            fontSmall = new Font("Cascadia Code", Font.PLAIN, 10);
+            fontMedium = new Font("Cascadia Code", Font.PLAIN, 12);
             // If the file wasn't found, or was incorrectly formatted:
         } catch (IOException | FontFormatException e) {
             e.printStackTrace();
@@ -164,7 +172,9 @@ public class LeviSchedule extends JPanel {
     // Wrapper function for loadSchedule, loads based off of day number
     private void loadToday(int currentDate) {
         // get the three letter representation of the date
-        String dayToGet = daysOfWeek[currentDate - 1].substring(0, 3).toLowerCase();
+        if (currentDate == 7)
+            currentDate = 0;
+        String dayToGet = daysOfWeek[currentDate].substring(0, 3).toLowerCase();
         // load the schedule
         loadSchedule("schedules/" + typeOfWeek + "/" + dayToGet + ".sched");
     }
@@ -213,10 +223,7 @@ public class LeviSchedule extends JPanel {
         }
     }
 
-    // The timer to update every 1/2 second
-    private Timer timer = new Timer(500, event -> {
-        // Repaint the component
-        repaint();
+    private double getPercentElapsed() {
         // Get the current date (precise)
         java.util.Date now = new java.util.Date();
         // Get the seconds, minutes, and hours
@@ -225,12 +232,23 @@ public class LeviSchedule extends JPanel {
         double minute = now.getMinutes();
         double hour = now.getHours();
         // Get the percent of the day that has passed
-        percentElapsed = ((second + (minute * 60) + (hour * 3600))) / 86400;
+        double percent = ((second + (minute * 60) + (hour * 3600))) / 86400;
+        return percent;
+    }
+
+    // The timer to update every 1/2 second
+    private Timer timer = new Timer(500, event -> {
+        // Repaint the component
+        repaint();
+        
         // Multiply the length of the schedule display by the passed percent
+        percentElapsed = getPercentElapsed();
         ratioElapsed = percentElapsed * scheduleDisplayH;
 
         // get the current day of the week
         int currentDate = LocalDate.now().getDayOfWeek().get(ChronoField.DAY_OF_WEEK);
+        System.out.println("Current day of the week: " + currentDate);
+        System.out.println("Stored day of the week: " + lastDate);
         // if the day of the week has changed (happens once a day!!)
         if (lastDate != currentDate) {
             // change the day
@@ -285,17 +303,14 @@ public class LeviSchedule extends JPanel {
         }
         // Display day of the week
         g2.setFont(fontBold);
-        String weekStamp = daysOfWeek[lastDate - 1];
+        int dateToDisplay = (lastDate < 7 ? lastDate : 0);
+        String weekStamp = daysOfWeek[dateToDisplay];
         centerText(weekStamp, g2, infoOffset + 40);
 
         // Display the events
         g2.setFont(fontSmall);
         for (ScheduledEvent ev : events) {
-            g2.setColor(ev.c);
-            g2.fillRect(0, ev.start + scheduleDisplayY, PREF_W, ev.end - (ev.start));
-            g2.setColor(Color.black);
-            if (ev.isSpan)
-                g2.drawString(ev.event.substring(1), 10, 5 + scheduleDisplayY + ev.start + (ev.end - ev.start) / 2);
+            ev.paint(g2, scheduleDisplayY, PREF_W);
         }
 
         // Set up time pointer stroke
