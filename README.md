@@ -1,18 +1,10 @@
 ## Getting Started
 
-Welcome to the VS Code Java world. Here is a guideline to help you get started to write Java code in Visual Studio Code.
-
-## Folder Structure
-
-The workspace contains two folders by default, where:
-
-- `src`: the folder to maintain sources
-- `lib`: the folder to maintain dependencies
-
-Meanwhile, the compiled output files will be generated in the `bin` folder by default.
-
-> If you want to customize the folder structure, open `.vscode/settings.json` and update the related settings there.
+Welcome to the LeviSchedule Program. Here is a guideline to help you get started to make your schedules in LeviSchedule.
+In /schedules, open classes.scopt . Then, replace each class name with your real class names, from first period to last period. Add in a RGBA color code for that class, if you wish to change it.
+Then, to set your schedules for each day, go to /schedules/default/mon.sched . You can change timestamps or add your own, and either add in a new event or remove one.
 
 ## Dependency Management
 
-The `JAVA PROJECTS` view allows you to manage your dependencies. More details can be found [here](https://github.com/microsoft/vscode-java-dependency#manage-dependencies).
+i dont support that shit mf
+go back to react bro idc
