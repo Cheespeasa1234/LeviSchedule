@@ -3,18 +3,17 @@
 
 // Import Dependencies
 import java.awt.Color;
+import java.awt.Rectangle;
 import java.util.HashMap;
 
-public class ScheduledEvent {
+public class ScheduledEvent implements Hoverable {
     // maps time "HH:mm" >> event "Event"
-    public double startSeconds;
-    public double endSeconds;
-    public double startPercent;
-    public double endPercent;
-    public int start;
-    public int end;
+    public String startTime, endTime;
+    public double startSeconds, endSeconds, startPercent, endPercent;
+    public int start, end;
 
     public boolean isSpan; // does it have beginning and end
+    public boolean hovering;
     public String event;
     public Color c;
 
@@ -54,6 +53,8 @@ public class ScheduledEvent {
             this.endSeconds = inputTimeToSeconds(tokens[1]);
         }
         this.startSeconds = inputTimeToSeconds(tokens[0]);
+        this.startTime = tokens[0];
+        this.endTime = tokens[1];
 
         // set the name of the event
         String eventName = rawData.substring(rawData.indexOf("\""));
@@ -69,12 +70,37 @@ public class ScheduledEvent {
         this.start = (int) (startPercent * displayH);
         this.end = (int) (endPercent * displayH);
     }
+    private int scheduleDisplayY;
+    private int PREF_W;
+    public void setGraphicsConstants(int scheduleDisplayY, int PREF_W) {
+        this.scheduleDisplayY = scheduleDisplayY;
+        this.PREF_W = PREF_W;
+    }
 
-    public void paint(java.awt.Graphics2D g2, int scheduleDisplayY, int PREF_W) {
+    public Rectangle getVisualBounds() {
+        return new Rectangle(0, this.start + this.scheduleDisplayY, this.PREF_W, this.end - (this.start));
+    }
+
+    public void paint(java.awt.Graphics2D g2) {
         g2.setColor(this.c);
-        g2.fillRect(0, this.start + scheduleDisplayY, PREF_W, this.end - (this.start));
+        g2.fill(this.getVisualBounds());
         g2.setColor(Color.BLACK);
+
+        String textToDisplay = this.event.substring(1);
+        if(hovering)
+            textToDisplay = startTime + " -> " + endTime;
+
         if (this.isSpan)
-            g2.drawString(this.event.substring(1), 10, 5 + scheduleDisplayY + this.start + (this.end - this.start) / 2);
+            g2.drawString(textToDisplay, 10, 5 + scheduleDisplayY + this.start + (this.end - this.start) / 2);
+    }
+
+    @Override
+    public void onHover(int mouseX, int mouseY) {
+        hovering = true;
+    }
+
+    @Override
+    public void onUnHover(int mouseX, int mouseY) {
+        hovering = false;
     }
 }

@@ -4,21 +4,32 @@
 // Import Dependencies
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.GridBagConstraints;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.FontFormatException;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Paint;
-import java.awt.Toolkit;
 import java.awt.GraphicsEnvironment;
-import java.awt.FontFormatException;
+import java.awt.Paint;
+import java.awt.Rectangle;
+import java.awt.Toolkit;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.temporal.ChronoField;
@@ -31,19 +42,17 @@ import java.util.Scanner;
 
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
-
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 
-public class LeviSchedule extends JPanel {
+public class LeviSchedule extends JPanel implements MouseMotionListener {
 
     // Define the screen size for math reasons
     public static final Dimension screenDimension = Toolkit.getDefaultToolkit().getScreenSize();
@@ -59,27 +68,28 @@ public class LeviSchedule extends JPanel {
     private Font fontBold;
     private Font fontMedium;
     private Font fontSmall;
+    private Font fontTiny;
 
     // Objects for the background colors etc
     private Color color1 = new Color(0, 201, 195, 130);
     private Color color2 = new Color(33, 118, 255, 130);
     private GradientPaint backgroundPaint = new GradientPaint(0, 0, color1, PREF_W, PREF_H, color2);
 
-    // List of the days of the week for displaying and for file management
-    private final String[] daysOfWeek = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
-            "Saturday" };
+    private String[] daysOfWeek = {"Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"};
+    private String[] typesOfWeek = {"default", "delay_120", "delay_90", "monday"};
+    
+    private int lastDate = LocalDate.now().getDayOfWeek().get(ChronoField.DAY_OF_WEEK);
+    private String typeOfWeek = "default";
 
     // List the events and variables used in fs
     private ArrayList<ScheduledEvent> events = new ArrayList<ScheduledEvent>();
     private HashMap<String, String> variables = new HashMap<String, String>();
 
-    // Define what type of week it is (which folder)
-    private String typeOfWeek = "default";
 
     // Will display text if we are looking at a different day than is today
     private String viewing = "";
 
-    // Variables for the dotted line representing now
+    // Variables for the dotted line representing now on screen
     private double ratioElapsed = 0;
     private double percentElapsed = 0;
     private int scheduleDisplayY = 100;
@@ -87,20 +97,10 @@ public class LeviSchedule extends JPanel {
     private float dashPhase = 0.0f;
     private float[] dash = { 2.0f, 5.0f };
 
-    // Get the day of today
-    private int lastDate = LocalDate.now().getDayOfWeek().get(ChronoField.DAY_OF_WEEK);
-
-    // Constructor for the main panel
-    public LeviSchedule(BorderLayout lay) {
-
-        // set visibility stuffs
-        this.setFocusable(true);
-        this.setBackground(Color.WHITE);
-        this.setLayout(lay);
-
+    // constructs the settings panel
+    private JPanel makeSettingsPanel() {
         // Define the settings panel
         JPanel settingsGroup = new JPanel();
-        settingsGroup.setLayout(new BorderLayout());
         // Dropdown for the choosing of schedule
         JComboBox<String> switchSchedule = new JComboBox<String>(daysOfWeek);
         switchSchedule.setSelectedItem(daysOfWeek[lastDate < 7 ? lastDate : 0]);
@@ -116,22 +116,59 @@ public class LeviSchedule extends JPanel {
                 viewing = "";
             }
         });
+        switchSchedule.setBorder(new EmptyBorder(0, 0, 20, 0));
         JLabel switchScheduleLabel = new JLabel("Set opened schedule");
-        switchScheduleLabel.setBorder(new EmptyBorder(32, 32, 32, 32));
+        
+        JComboBox<String> switchWeekType = new JComboBox<String>(typesOfWeek);
+        switchWeekType.setSelectedItem("default");
+        switchWeekType.addActionListener(event -> {
+            typeOfWeek = (String) switchWeekType.getSelectedItem();
+            
+        });
+
         settingsGroup.add(switchScheduleLabel);
         settingsGroup.add(switchSchedule);
         settingsGroup.setVisible(false);
+        
+        return settingsGroup;
+    }
 
+    // Initializes and adds the menu at the bottom of the screen
+    private JPanel makeButtonGroup(ActionListener openSettingsListener) {
+        
         // Button for toggling settings
         JButton openSettingsButton = new JButton("Options");
-        openSettingsButton.addActionListener(event -> {
+        openSettingsButton.addActionListener(openSettingsListener);
+        // Button for opening file
+        JButton openFileButton = new JButton("Open");
+        openFileButton.addActionListener(event -> {
+            loadChosen();
+        });
+
+        GridLayout experimentLayout = new GridLayout(0, 2);
+        JPanel panel = new JPanel(experimentLayout);
+        panel.add(openSettingsButton);
+        panel.add(openFileButton);
+        return panel;
+    }
+
+    // Constructor
+    public LeviSchedule(BorderLayout lay) {
+        // set visibility stuffs
+        this.setFocusable(true);
+        this.setBackground(Color.WHITE);
+        this.addMouseMotionListener(this);
+        
+        this.setLayout(new BorderLayout());
+
+        JPanel settingsGroup = makeSettingsPanel();
+
+        // Button for toggling settings
+        JPanel buttonGroup = makeButtonGroup(event -> {
             settingsGroup.setVisible(!settingsGroup.isVisible());
         });
-        openSettingsButton.setVisible(true);
-
-        // Add the settings to the panel for later use
-        this.add(openSettingsButton, BorderLayout.SOUTH);
         this.add(settingsGroup);
+        this.add(buttonGroup, BorderLayout.SOUTH);
 
         // Start the repaint / update timer
         timer.start();
@@ -141,8 +178,10 @@ public class LeviSchedule extends JPanel {
 
         // Load files / assets
         loadcmap("schedules/classes.scopt");
+        loadcmap("schedules/config.scopt");
         loadToday(currentDate);
         loadAssets();
+        setOption("opt_colortheme", "Purple Sky");
     }
 
     // Load assets, like fonts and images
@@ -162,6 +201,7 @@ public class LeviSchedule extends JPanel {
             font = new Font("Cascadia Code", Font.PLAIN, 16);
             fontBold = new Font("Cascadia Code", Font.PLAIN, 16);
             fontSmall = new Font("Cascadia Code", Font.PLAIN, 10);
+            fontTiny = new Font("Cascadia Code", Font.PLAIN, 8);
             fontMedium = new Font("Cascadia Code", Font.PLAIN, 12);
             // If the file wasn't found, or was incorrectly formatted:
         } catch (IOException | FontFormatException e) {
@@ -177,6 +217,29 @@ public class LeviSchedule extends JPanel {
         String dayToGet = daysOfWeek[currentDate].substring(0, 3).toLowerCase();
         // load the schedule
         loadSchedule("schedules/" + typeOfWeek + "/" + dayToGet + ".sched");
+    }
+
+    // recursively sets the font value of a Component
+    private void setFontRecursively(java.awt.Component[] comp, Font f) {
+        for (int x = 0; x < comp.length; x++) {
+            if (comp[x] instanceof java.awt.Container)
+                setFontRecursively(((java.awt.Container) comp[x]).getComponents(), f);
+            try {
+                comp[x].setFont(f);
+            } catch (Exception e) {
+            } // do nothing
+        }
+    }
+
+    // prompts user to pick a .sched file, which then loads the file into the app
+    private void loadChosen() {
+        String docsFolder = System.getProperty("user.dir") + "/schedules";
+        File documents = new File(docsFolder);
+        JFileChooser jfc = new JFileChooser(documents);
+        setFontRecursively(jfc.getComponents(), fontMedium);
+        jfc.showOpenDialog(this);
+        File selected = jfc.getSelectedFile();
+        loadSchedule(selected.getPath());
     }
 
     // Load the class map, which represents your classes and their colors
@@ -213,7 +276,9 @@ public class LeviSchedule extends JPanel {
             // Keep reading until we reach the end
             while (!line.equals("END")) {
                 // Send the line to be processed by the ScheduledEvent constructor
-                events.add(new ScheduledEvent(line, scheduleDisplayH, variables));
+                ScheduledEvent ev = new ScheduledEvent(line, scheduleDisplayH, variables);
+                ev.setGraphicsConstants(scheduleDisplayY, PREF_W);
+                events.add(ev);
                 // Read next line
                 line = schedReader.nextLine();
             }
@@ -236,8 +301,37 @@ public class LeviSchedule extends JPanel {
         return percent;
     }
 
-    // The timer to update every 1/2 second
-    private Timer timer = new Timer(500, event -> {
+    private void setOption(String key, String value) {
+        variables.put(key, value);
+        // get config file
+        File config = new File("schedules/config.scopt");
+        String rewrite = "";
+        Scanner s;
+        try {
+            s = new Scanner(config);
+            String lastLine = s.nextLine();
+            while(!lastLine.equals("END")) {
+                if(lastLine.startsWith(key))
+                    rewrite += key + " = " + value + "\n";
+                else rewrite += lastLine + "\n";
+                lastLine = s.nextLine();
+            }
+            rewrite += "\nEND";
+
+            Path path = config.toPath();
+            byte[] strToBytes = rewrite.getBytes();
+
+            Files.write(path, strToBytes);
+            
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } 
+    }
+
+    // The timer to update every second
+    private Timer timer = new Timer(1000/60, event -> {
         // Repaint the component
         repaint();
         
@@ -247,12 +341,15 @@ public class LeviSchedule extends JPanel {
 
         // get the current day of the week
         int currentDate = LocalDate.now().getDayOfWeek().get(ChronoField.DAY_OF_WEEK);
-        System.out.println("Current day of the week: " + currentDate);
-        System.out.println("Stored day of the week: " + lastDate);
         // if the day of the week has changed (happens once a day!!)
         if (lastDate != currentDate) {
             // change the day
             loadToday(currentDate);
+            lastDate = LocalDate.now().getDayOfWeek().get(ChronoField.DAY_OF_WEEK);
+            // if this makes the new week
+            if (currentDate == 7) {
+                setOption("typeofweek", "default");
+            }
         }
     });
 
@@ -266,7 +363,6 @@ public class LeviSchedule extends JPanel {
 
     // Draw to the window
     protected void paintComponent(Graphics g) {
-
         // Call the supermethod
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
@@ -310,24 +406,31 @@ public class LeviSchedule extends JPanel {
         // Display the events
         g2.setFont(fontSmall);
         for (ScheduledEvent ev : events) {
-            ev.paint(g2, scheduleDisplayY, PREF_W);
+            ev.paint(g2);
         }
 
+        g2.setFont(fontTiny);
         // Set up time pointer stroke
-        dashPhase += 9.0f;
+        int pointerLength = 30;
+        dashPhase += 0.2f;
         BasicStroke dashedStroke = new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER, 1.5f, dash,
                 dashPhase);
+
         // Draw the time pointer
         g2.setStroke(dashedStroke);
-        g2.drawLine(0, (int) ratioElapsed + scheduleDisplayY, PREF_W - 65, (int) ratioElapsed + scheduleDisplayY);
+        g2.setColor(new Color(0, 0, 0, 100));
+        g2.drawLine(0, (int) ratioElapsed + scheduleDisplayY, PREF_W - pointerLength, (int) ratioElapsed + scheduleDisplayY);
+        g2.setColor(Color.BLACK);
+        
+        // Draw the percent passed
+        String percent = (percentElapsed * 100 + "");
+        percent = percent.substring(0, Math.min(4, percent.length() - 1));
+        g2.drawString(percent + "%", PREF_W - (pointerLength - 2), (int) ratioElapsed + 3 + scheduleDisplayY);
+        
         // Draw the schedule bounds
         g2.setStroke(new BasicStroke(2));
         g2.drawLine(0, scheduleDisplayY, PREF_W, scheduleDisplayY);
         g2.drawLine(0, scheduleDisplayH + scheduleDisplayY, PREF_W, scheduleDisplayH + scheduleDisplayY);
-        // Draw the percent passed
-        String percent = (percentElapsed * 100 + "");
-        percent = percent.substring(0, Math.min(5, percent.length() - 1));
-        g2.drawString(percent + "%", PREF_W - 60, (int) ratioElapsed + 3 + scheduleDisplayY);
     }
 
     /* METHODS FOR CREATING JFRAME AND JPANEL */
@@ -338,7 +441,8 @@ public class LeviSchedule extends JPanel {
     // create the window
     public static void createAndShowGUI() {
         JFrame frame = new JFrame("LeviSchedule");
-        JPanel mainPanel = new LeviSchedule(new BorderLayout());
+        BorderLayout lay = new BorderLayout();
+        JPanel mainPanel = new LeviSchedule(lay);
 
         // settings
         frame.getContentPane().add(mainPanel);
@@ -351,7 +455,7 @@ public class LeviSchedule extends JPanel {
     }
 
     // breh idk
-    public static void main(java.lang.String... arguments) {
+    public static void main(String... args) {
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
                 createAndShowGUI();
@@ -359,4 +463,16 @@ public class LeviSchedule extends JPanel {
         });
     }
 
+    @Override
+    public void mouseDragged(MouseEvent e){}
+
+    @Override
+    public void mouseMoved(MouseEvent e) {
+        for(ScheduledEvent event: events)
+            if (event.getVisualBounds().intersects(new Rectangle(e.getX(), e.getY(), 1, 1)))
+                event.onHover(e.getX(), e.getY());
+            else if(event.hovering) 
+                event.onUnHover(e.getX(), e.getY());
+            
+    }
 }

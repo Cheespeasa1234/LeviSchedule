@@ -1,3 +1,4 @@
+package lib;
 // Written by Nathaniel Levison, March 2023
 // License for this file at /LICENSE.txt
 
