@@ -1,5 +1,3 @@
 opt_colortheme = Purple Sky
-opt_typeofweek = default
-
-
+opt_typeofweek = delay
 END

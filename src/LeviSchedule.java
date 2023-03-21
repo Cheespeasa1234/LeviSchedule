@@ -76,7 +76,7 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
     private GradientPaint backgroundPaint = new GradientPaint(0, 0, color1, PREF_W, PREF_H, color2);
 
     private String[] daysOfWeek = {"Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"};
-    private String[] typesOfWeek = {"default", "delay_120", "delay_90", "monday"};
+    private String[] typesOfWeek = {"default", "delay", "off"};
     
     private int lastDate = LocalDate.now().getDayOfWeek().get(ChronoField.DAY_OF_WEEK);
     private String typeOfWeek = "default";
@@ -85,8 +85,7 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
     private ArrayList<ScheduledEvent> events = new ArrayList<ScheduledEvent>();
     private HashMap<String, String> variables = new HashMap<String, String>();
 
-
-    // Will display text if we are looking at a different day than is today
+    // Will display text if we are looking at a different schedule than is today
     private String viewing = "";
 
     // Variables for the dotted line representing now on screen
@@ -104,6 +103,7 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
         // Dropdown for the choosing of schedule
         JComboBox<String> switchSchedule = new JComboBox<String>(daysOfWeek);
         switchSchedule.setSelectedItem(daysOfWeek[lastDate < 7 ? lastDate : 0]);
+        switchSchedule.setBorder(new EmptyBorder(0, 0, 20, 0));
         switchSchedule.addActionListener(event -> {
             String chosenSchedule = (String) switchSchedule.getSelectedItem();
             List<String> daysOfWeekAL = Arrays.asList(daysOfWeek);
@@ -116,18 +116,21 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
                 viewing = "";
             }
         });
-        switchSchedule.setBorder(new EmptyBorder(0, 0, 20, 0));
-        JLabel switchScheduleLabel = new JLabel("Set opened schedule");
         
         JComboBox<String> switchWeekType = new JComboBox<String>(typesOfWeek);
         switchWeekType.setSelectedItem("default");
+        switchWeekType.setBorder(new EmptyBorder(0, 0, 20, 0));
         switchWeekType.addActionListener(event -> {
             typeOfWeek = (String) switchWeekType.getSelectedItem();
-            
+            if(!typeOfWeek.equals("off")) {
+                loadToday(lastDate);
+            }
         });
 
-        settingsGroup.add(switchScheduleLabel);
+        settingsGroup.add(new JLabel("Set opened schedule"));
         settingsGroup.add(switchSchedule);
+        settingsGroup.add(new JLabel("Set type of week"));
+        settingsGroup.add(switchWeekType);
         settingsGroup.setVisible(false);
         
         return settingsGroup;
@@ -161,27 +164,31 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
         
         this.setLayout(new BorderLayout());
 
+        
         JPanel settingsGroup = makeSettingsPanel();
-
+        
         // Button for toggling settings
         JPanel buttonGroup = makeButtonGroup(event -> {
             settingsGroup.setVisible(!settingsGroup.isVisible());
         });
         this.add(settingsGroup);
         this.add(buttonGroup, BorderLayout.SOUTH);
-
+        
         // Start the repaint / update timer
         timer.start();
-
+        
         // Get the current date
         int currentDate = LocalDate.now().getDayOfWeek().get(ChronoField.DAY_OF_WEEK);
+        
+        // load settings
+        loadScopt("schedules/config.scopt");
+        typeOfWeek = variables.get("opt_typeofweek");
+        System.out.println(typeOfWeek);
 
         // Load files / assets
-        loadcmap("schedules/classes.scopt");
-        loadcmap("schedules/config.scopt");
+        loadScopt("schedules/classes.scopt");
         loadToday(currentDate);
         loadAssets();
-        setOption("opt_colortheme", "Purple Sky");
     }
 
     // Load assets, like fonts and images
@@ -216,7 +223,7 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
             currentDate = 0;
         String dayToGet = daysOfWeek[currentDate].substring(0, 3).toLowerCase();
         // load the schedule
-        loadSchedule("schedules/" + typeOfWeek + "/" + dayToGet + ".sched");
+        loadSched("schedules/" + typeOfWeek + "/" + dayToGet + ".sched");
     }
 
     // recursively sets the font value of a Component
@@ -239,11 +246,14 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
         setFontRecursively(jfc.getComponents(), fontMedium);
         jfc.showOpenDialog(this);
         File selected = jfc.getSelectedFile();
-        loadSchedule(selected.getPath());
+        
+        String path = selected.getPath();
+        loadSched(path);
+        viewing = path.substring(path.indexOf("LeviSchedule"));
     }
 
     // Load the class map, which represents your classes and their colors
-    private void loadcmap(String path) {
+    private void loadScopt(String path) {
         try {
             // Set up scanner of the cmap
             Scanner mapReader = new Scanner(new File(path));
@@ -265,7 +275,7 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
     }
 
     // Load a schedule file into the event storage
-    private void loadSchedule(String path) {
+    private void loadSched(String path) {
         // clear the events in case this is during runtime
         events.clear();
         try {
@@ -316,7 +326,7 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
                 else rewrite += lastLine + "\n";
                 lastLine = s.nextLine();
             }
-            rewrite += "\nEND";
+            rewrite += "END";
 
             Path path = config.toPath();
             byte[] strToBytes = rewrite.getBytes();
@@ -343,13 +353,14 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
         int currentDate = LocalDate.now().getDayOfWeek().get(ChronoField.DAY_OF_WEEK);
         // if the day of the week has changed (happens once a day!!)
         if (lastDate != currentDate) {
+            // if this makes the new week
+            if (currentDate == 7) {
+                setOption("opt_typeofweek", "default");
+                typeOfWeek = "default";
+            }
             // change the day
             loadToday(currentDate);
             lastDate = LocalDate.now().getDayOfWeek().get(ChronoField.DAY_OF_WEEK);
-            // if this makes the new week
-            if (currentDate == 7) {
-                setOption("typeofweek", "default");
-            }
         }
     });
 
