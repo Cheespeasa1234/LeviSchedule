@@ -6,6 +6,8 @@ import java.awt.Color;
 import java.awt.Rectangle;
 import java.util.HashMap;
 
+import lib.Hoverable;
+
 public class ScheduledEvent implements Hoverable {
     // maps time "HH:mm" >> event "Event"
     public String startTime, endTime;

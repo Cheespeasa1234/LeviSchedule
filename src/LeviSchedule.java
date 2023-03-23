@@ -35,6 +35,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Currency;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -52,16 +53,22 @@ import javax.swing.Timer;
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 
+import lib.Array;
+
 public class LeviSchedule extends JPanel implements MouseMotionListener {
 
     // Define the screen size for math reasons
     public static final Dimension screenDimension = Toolkit.getDefaultToolkit().getScreenSize();
     public static final int screenW = (int) screenDimension.getWidth();
     public static final int screenH = (int) screenDimension.getHeight();
-
+    
     // Define the window size
     public static final int PREF_W = 150;
     public static final int PREF_H = screenH + 100;
+
+    // define the schedule display size
+    private int scheduleDisplayY = 100;
+    private int scheduleDisplayH = 500;
 
     // Objects for the fonts
     private Font font;
@@ -71,60 +78,68 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
     private Font fontTiny;
 
     // Objects for the background colors etc
-    private Color color1 = new Color(0, 201, 195, 130);
-    private Color color2 = new Color(33, 118, 255, 130);
-    private GradientPaint backgroundPaint = new GradientPaint(0, 0, color1, PREF_W, PREF_H, color2);
+    private Color defaultBG1 = new Color(0, 201, 195, 130);
+    private Color defaultBG2 = new Color(33, 118, 255, 130);
+    private GradientPaint backgroundPaint = new GradientPaint(0, 0, defaultBG1, PREF_W, PREF_H, defaultBG2);
 
-    private String[] daysOfWeek = {"Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"};
-    private String[] typesOfWeek = {"default", "delay", "off"};
+    private Array<String> daysOfWeek = new Array<String>(new String[] {"Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"});
+    private Array<String> typesOfWeek = new Array<String>(new String[] {"default", "delayed", "off"});
     
     private int lastDate = LocalDate.now().getDayOfWeek().get(ChronoField.DAY_OF_WEEK);
     private String typeOfWeek = "default";
 
     // List the events and variables used in fs
-    private ArrayList<ScheduledEvent> events = new ArrayList<ScheduledEvent>();
+    private Array<ScheduledEvent> events = new Array<ScheduledEvent>();
     private HashMap<String, String> variables = new HashMap<String, String>();
 
     // Will display text if we are looking at a different schedule than is today
     private String viewing = "";
 
+    // Will change the open button to close button
+    private boolean fileOpened = false;
+
     // Variables for the dotted line representing now on screen
     private double ratioElapsed = 0;
     private double percentElapsed = 0;
-    private int scheduleDisplayY = 100;
-    private int scheduleDisplayH = 500;
     private float dashPhase = 0.0f;
     private float[] dash = { 2.0f, 5.0f };
+
+    JComboBox<String> switchSchedule, switchWeekType;
+    JButton openSettingsButton, openFileButton;
+    JPanel settingsGroup, buttonGroup;
+    GridLayout experimentLayout;
 
     // constructs the settings panel
     private JPanel makeSettingsPanel() {
         // Define the settings panel
-        JPanel settingsGroup = new JPanel();
+        settingsGroup = new JPanel();
         // Dropdown for the choosing of schedule
-        JComboBox<String> switchSchedule = new JComboBox<String>(daysOfWeek);
-        switchSchedule.setSelectedItem(daysOfWeek[lastDate < 7 ? lastDate : 0]);
+        switchSchedule = new JComboBox<String>(daysOfWeek.toArray());
+        switchSchedule.setSelectedItem(daysOfWeek.get(lastDate < 7 ? lastDate : 0));
         switchSchedule.setBorder(new EmptyBorder(0, 0, 20, 0));
         switchSchedule.addActionListener(event -> {
             String chosenSchedule = (String) switchSchedule.getSelectedItem();
-            List<String> daysOfWeekAL = Arrays.asList(daysOfWeek);
-            int listIndexChosen = daysOfWeekAL.indexOf(chosenSchedule);
+            int listIndexChosen = daysOfWeek.indexOf(chosenSchedule);
 
             loadToday(listIndexChosen < 7 ? listIndexChosen : 0);
             if (listIndexChosen != lastDate) {
-                viewing = daysOfWeek[listIndexChosen];
+                viewing = daysOfWeek.get(listIndexChosen);
             } else {
                 viewing = "";
             }
         });
         
-        JComboBox<String> switchWeekType = new JComboBox<String>(typesOfWeek);
-        switchWeekType.setSelectedItem("default");
+        switchWeekType = new JComboBox<String>(typesOfWeek.toArray());
+        switchWeekType.setSelectedItem(typeOfWeek);
         switchWeekType.setBorder(new EmptyBorder(0, 0, 20, 0));
         switchWeekType.addActionListener(event -> {
             typeOfWeek = (String) switchWeekType.getSelectedItem();
             if(!typeOfWeek.equals("off")) {
                 loadToday(lastDate);
+                fileOpened = true;
+                openFileButton.setText("Close");
             }
+            setOption("opt_typeofweek", typeOfWeek);
         });
 
         settingsGroup.add(new JLabel("Set opened schedule"));
@@ -137,22 +152,32 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
     }
 
     // Initializes and adds the menu at the bottom of the screen
-    private JPanel makeButtonGroup(ActionListener openSettingsListener) {
+    private void makeButtonGroup() {
         
         // Button for toggling settings
-        JButton openSettingsButton = new JButton("Options");
-        openSettingsButton.addActionListener(openSettingsListener);
+        openSettingsButton = new JButton("Options");
+        openSettingsButton.addActionListener(event -> {
+            settingsGroup.setVisible(!settingsGroup.isVisible());
+        });
         // Button for opening file
-        JButton openFileButton = new JButton("Open");
+        openFileButton = new JButton("Open");
         openFileButton.addActionListener(event -> {
-            loadChosen();
+            if(fileOpened) {
+                loadToday(lastDate);
+                fileOpened = false;
+                openFileButton.setText("Open");
+                viewing = "";
+            } else {
+                loadChosen();
+                fileOpened = true;
+                openFileButton.setText("Close");
+            }
         });
 
-        GridLayout experimentLayout = new GridLayout(0, 2);
-        JPanel panel = new JPanel(experimentLayout);
-        panel.add(openSettingsButton);
-        panel.add(openFileButton);
-        return panel;
+        experimentLayout = new GridLayout(0, 2);
+        buttonGroup = new JPanel(experimentLayout);
+        buttonGroup.add(openSettingsButton);
+        buttonGroup.add(openFileButton);
     }
 
     // Constructor
@@ -162,15 +187,12 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
         this.setBackground(Color.WHITE);
         this.addMouseMotionListener(this);
         
-        this.setLayout(new BorderLayout());
+        this.setLayout(lay);
 
-        
-        JPanel settingsGroup = makeSettingsPanel();
+        makeSettingsPanel();
+        makeButtonGroup();
         
         // Button for toggling settings
-        JPanel buttonGroup = makeButtonGroup(event -> {
-            settingsGroup.setVisible(!settingsGroup.isVisible());
-        });
         this.add(settingsGroup);
         this.add(buttonGroup, BorderLayout.SOUTH);
         
@@ -183,20 +205,19 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
         // load settings
         loadScopt("schedules/config.scopt");
         typeOfWeek = variables.get("opt_typeofweek");
-        System.out.println(typeOfWeek);
 
         // Load files / assets
         loadScopt("schedules/classes.scopt");
         loadToday(currentDate);
-        loadAssets();
+        loadAssets("src/fonts/CascadiaCode.ttf");
     }
 
     // Load assets, like fonts and images
-    private void loadAssets() {
+    private void loadAssets(String fontFile) {
         // load fonts
         try {
             // get the font from the file
-            File fontSource = new File("src/fonts/CascadiaCode.ttf");
+            File fontSource = new File(fontFile);
             Font loadedFont = Font.createFont(Font.TRUETYPE_FONT, fontSource).deriveFont(12f);
 
             // derive the fonts for use
@@ -221,7 +242,7 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
         // get the three letter representation of the date
         if (currentDate == 7)
             currentDate = 0;
-        String dayToGet = daysOfWeek[currentDate].substring(0, 3).toLowerCase();
+        String dayToGet = daysOfWeek.get(currentDate).substring(0, 3).toLowerCase();
         // load the schedule
         loadSched("schedules/" + typeOfWeek + "/" + dayToGet + ".sched");
     }
@@ -249,7 +270,8 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
         
         String path = selected.getPath();
         loadSched(path);
-        viewing = path.substring(path.indexOf("LeviSchedule"));
+        String cutoff = "LeviSchedule/schedules/";
+        viewing = path.substring(path.indexOf(cutoff) + cutoff.length());
     }
 
     // Load the class map, which represents your classes and their colors
@@ -403,19 +425,25 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
         // If we are not on today's schedule
         if (!viewing.equals("")) {
             // Display viewing notice
-            g2.setFont(fontMedium);
+            g2.setFont(fontTiny);
             g2.setColor(Color.RED);
-            centerText("Viewing: " + viewing, g2, infoOffset + 60);
+            centerText("Viewing: " + viewing, g2, infoOffset + 70);
             g2.setColor(Color.BLACK);
         }
         // Display day of the week
         g2.setFont(fontBold);
         int dateToDisplay = (lastDate < 7 ? lastDate : 0);
-        String weekStamp = daysOfWeek[dateToDisplay];
+        String weekStamp = daysOfWeek.get(dateToDisplay);
         centerText(weekStamp, g2, infoOffset + 40);
 
-        // Display the events
+        String typeDisplay = " week";
         g2.setFont(fontSmall);
+        if(!typeOfWeek.equals("default")) {
+            typeDisplay = typeOfWeek.substring(0, 1).toUpperCase() + typeOfWeek.substring(1) + typeDisplay;
+            centerText(typeDisplay, g2, infoOffset + 55);
+        }
+
+        // Display the events
         for (ScheduledEvent ev : events) {
             ev.paint(g2);
         }

@@ -1,3 +1,4 @@
+package lib;
 public interface Hoverable {
     
     public void onHover(int mouseX, int mouseY);
