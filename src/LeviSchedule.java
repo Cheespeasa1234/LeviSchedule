@@ -8,7 +8,10 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.GridBagConstraints;
+import java.awt.image.BufferedImage;
+import java.awt.Image;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -18,10 +21,13 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.Paint;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
@@ -41,6 +47,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
 
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -55,7 +62,7 @@ import javax.swing.border.EmptyBorder;
 
 import lib.Array;
 
-public class LeviSchedule extends JPanel implements MouseMotionListener {
+public class LeviSchedule extends JPanel implements MouseMotionListener, MouseListener {
 
     // Define the screen size for math reasons
     public static final Dimension screenDimension = Toolkit.getDefaultToolkit().getScreenSize();
@@ -186,12 +193,18 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
         this.setFocusable(true);
         this.setBackground(Color.WHITE);
         this.addMouseMotionListener(this);
+        this.addMouseListener(this);
+
+        // BufferedImage image = new BufferedImage(16,16, BufferedImage.TYPE_INT_ARGB);
+        // Cursor smoothCursor = Toolkit.getDefaultToolkit().createCustomCursor(image, new Point(15, 15), "invisibleCursor");
+
+        this.setCursor(new Cursor(Cursor.CROSSHAIR_CURSOR));
         
         this.setLayout(lay);
 
         makeSettingsPanel();
         makeButtonGroup();
-        
+
         // Button for toggling settings
         this.add(settingsGroup);
         this.add(buttonGroup, BorderLayout.SOUTH);
@@ -343,23 +356,14 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
             s = new Scanner(config);
             String lastLine = s.nextLine();
             while(!lastLine.equals("END")) {
-                if(lastLine.startsWith(key))
-                    rewrite += key + " = " + value + "\n";
-                else rewrite += lastLine + "\n";
+                rewrite += (lastLine.startsWith(key) ? (key + " = " + value) : (lastLine)) + "\n";
                 lastLine = s.nextLine();
             }
-            rewrite += "END";
-
-            Path path = config.toPath();
-            byte[] strToBytes = rewrite.getBytes();
-
-            Files.write(path, strToBytes);
+            Files.write(config.toPath(), (rewrite + "END").getBytes());
             
-        } catch (FileNotFoundException e) {
+        } catch (Exception e) {
             e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } 
+        }
     }
 
     // The timer to update every second
@@ -394,8 +398,10 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
         g2.drawString(text, PREF_W / 2 - width / 2, height);
     }
 
+    int redrawCursorPos = 0;
     // Draw to the window
-    protected void paintComponent(Graphics g) {
+    protected final void paintComponent(Graphics g) {
+        redrawCursorPos++;
         // Call the supermethod
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
@@ -417,49 +423,41 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
         Date now = new Date();
         int infoOffset = 25;
         // Display current time
-        String timeStamp = new SimpleDateFormat("HH:mm.ss").format(now);
-        centerText(timeStamp, g2, infoOffset);
+        centerText(new SimpleDateFormat("HH:mm.ss").format(now), g2, infoOffset);
         // Display current date
-        String dateStamp = new SimpleDateFormat("MM/dd/yyyy").format(now);
-        centerText(dateStamp, g2, infoOffset + 20);
-        // If we are not on today's schedule
-        if (!viewing.equals("")) {
-            // Display viewing notice
-            g2.setFont(fontTiny);
-            g2.setColor(Color.RED);
-            centerText("Viewing: " + viewing, g2, infoOffset + 70);
-            g2.setColor(Color.BLACK);
-        }
+        centerText(new SimpleDateFormat("MM/dd/yyyy").format(now), g2, infoOffset + 20);
         // Display day of the week
         g2.setFont(fontBold);
-        int dateToDisplay = (lastDate < 7 ? lastDate : 0);
-        String weekStamp = daysOfWeek.get(dateToDisplay);
+        String weekStamp = daysOfWeek.get(lastDate < 7 ? lastDate : 0);
         centerText(weekStamp, g2, infoOffset + 40);
 
-        String typeDisplay = " week";
+        String weekType = " week";
         g2.setFont(fontSmall);
         if(!typeOfWeek.equals("default")) {
-            typeDisplay = typeOfWeek.substring(0, 1).toUpperCase() + typeOfWeek.substring(1) + typeDisplay;
-            centerText(typeDisplay, g2, infoOffset + 55);
+            centerText(
+                typeOfWeek.substring(0, 1).toUpperCase() + typeOfWeek.substring(1) + weekType, 
+                g2, 
+                infoOffset + 55
+            );
         }
 
         // Display the events
-        for (ScheduledEvent ev : events) {
+        events.forEach(ev -> {
             ev.paint(g2);
-        }
+        });
 
         g2.setFont(fontTiny);
         // Set up time pointer stroke
         int pointerLength = 30;
         dashPhase += 0.2f;
-        BasicStroke dashedStroke = new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER, 1.5f, dash,
-                dashPhase);
-
-        // Draw the time pointer
-        g2.setStroke(dashedStroke);
-        g2.setColor(new Color(0, 0, 0, 100));
-        g2.drawLine(0, (int) ratioElapsed + scheduleDisplayY, PREF_W - pointerLength, (int) ratioElapsed + scheduleDisplayY);
-        g2.setColor(Color.BLACK);
+        BasicStroke dashedStroke = new BasicStroke(
+            1.5f, 
+            BasicStroke.CAP_ROUND, 
+            BasicStroke.JOIN_MITER, 
+            1.5f, 
+            dash,
+            dashPhase
+        );
         
         // Draw the percent passed
         String percent = (percentElapsed * 100 + "");
@@ -470,6 +468,20 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
         g2.setStroke(new BasicStroke(2));
         g2.drawLine(0, scheduleDisplayY, PREF_W, scheduleDisplayY);
         g2.drawLine(0, scheduleDisplayH + scheduleDisplayY, PREF_W, scheduleDisplayH + scheduleDisplayY);
+
+        // If we are not on today's schedule
+        g2.setFont(fontTiny);
+        g2.setColor(Color.RED);
+        if (!viewing.equals("")) {
+            // Display viewing notice
+            centerText("Viewing: " + viewing, g2, infoOffset + 70);
+        }
+
+        // Draw the time pointer
+        g2.setStroke(dashedStroke);
+        g2.setColor(new Color(0, 0, 0, 100));
+        g2.drawLine(0, (int) ratioElapsed + scheduleDisplayY, PREF_W - pointerLength, (int) ratioElapsed + scheduleDisplayY);
+
     }
 
     /* METHODS FOR CREATING JFRAME AND JPANEL */
@@ -494,24 +506,31 @@ public class LeviSchedule extends JPanel implements MouseMotionListener {
     }
 
     // breh idk
-    public static void main(String... args) {
+    public static strictfp final void main(final String... arguments) throws IOException {
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
                 createAndShowGUI();
             }
         });
     }
-
-    @Override
-    public void mouseDragged(MouseEvent e){}
-
-    @Override
-    public void mouseMoved(MouseEvent e) {
+    
+    @Override public void mouseMoved(MouseEvent e) {
         for(ScheduledEvent event: events)
-            if (event.getVisualBounds().intersects(new Rectangle(e.getX(), e.getY(), 1, 1)))
-                event.onHover(e.getX(), e.getY());
-            else if(event.hovering) 
-                event.onUnHover(e.getX(), e.getY());
-            
+        if (event.getVisualBounds().intersects(new Rectangle(e.getX(), e.getY(), 1, 1)))
+        event.onHover(e.getX(), e.getY());
+        else if(event.hovering) 
+        event.onUnHover(e.getX(), e.getY());  
     }
+
+    @Override public void mouseDragged(MouseEvent e) {}
+
+    @Override public void mouseClicked(MouseEvent e) {}
+
+    @Override public void mousePressed(MouseEvent e) {}
+
+    @Override public void mouseReleased(MouseEvent e) {}
+
+    @Override public void mouseExited(MouseEvent e) {}
+
+    @Override public void mouseEntered(MouseEvent e) {}
 }
