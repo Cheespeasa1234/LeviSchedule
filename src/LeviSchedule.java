@@ -74,8 +74,11 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
     public static final int PREF_H = screenH + 100;
 
     // define the schedule display size
-    private int scheduleDisplayY = 100;
+    private int scheduleDisplayY = 200;
     private int scheduleDisplayH = 500;
+    
+    // define the tab open
+    private int tabIdx = 0;
 
     // Objects for the fonts
     private Font font;
@@ -422,15 +425,13 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
         // Display time info at top
         Date now = new Date();
         int infoOffset = 25;
-        // Display current time
         centerText(new SimpleDateFormat("HH:mm.ss").format(now), g2, infoOffset);
-        // Display current date
         centerText(new SimpleDateFormat("MM/dd/yyyy").format(now), g2, infoOffset + 20);
-        // Display day of the week
         g2.setFont(fontBold);
         String weekStamp = daysOfWeek.get(lastDate < 7 ? lastDate : 0);
         centerText(weekStamp, g2, infoOffset + 40);
 
+        // Display day info
         String weekType = " week";
         g2.setFont(fontSmall);
         if(!typeOfWeek.equals("default")) {
@@ -446,7 +447,6 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
             ev.paint(g2);
         });
 
-        g2.setFont(fontTiny);
         // Set up time pointer stroke
         int pointerLength = 30;
         dashPhase += 0.2f;
@@ -457,9 +457,10 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
             1.5f, 
             dash,
             dashPhase
-        );
-        
+            );
+            
         // Draw the percent passed
+        g2.setFont(fontTiny);
         String percent = (percentElapsed * 100 + "");
         percent = percent.substring(0, Math.min(4, percent.length() - 1));
         g2.drawString(percent + "%", PREF_W - (pointerLength - 2), (int) ratioElapsed + 3 + scheduleDisplayY);
