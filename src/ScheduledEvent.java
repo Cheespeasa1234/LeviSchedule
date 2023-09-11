@@ -8,7 +8,7 @@ import java.util.HashMap;
 
 import lib.Hoverable;
 
-public class ScheduledEvent implements Hoverable {
+public class ScheduledEvent {
     // maps time "HH:mm" >> event "Event"
     public String startTime, endTime;
     public double startSeconds, endSeconds, startPercent, endPercent;
@@ -16,8 +16,7 @@ public class ScheduledEvent implements Hoverable {
 
     public boolean isSpan; // does it have beginning and end
     public boolean hovering;
-    public String event;
-    public Color c;
+    public Class trackedClass;
 
     // turn the file input to seconds since midnight
     public static int inputTimeToSeconds(String in) {
@@ -29,23 +28,11 @@ public class ScheduledEvent implements Hoverable {
 
     // constructor
     public ScheduledEvent(String rawData, int displayH, HashMap<String, String> vars) {
-        // if given var:
-        if (rawData.indexOf("$") > -1) {
-            // get the variable called
-            String var = rawData.substring(rawData.indexOf("$") + 1);
-            System.out.print("VAR: " + var + " || ");
-            // get the variable value
-            String val = vars.get(var);
-            System.out.print("VAL: " + val + " || ");
-            // replace the variable call with the value (very dynamic)
-            rawData = rawData.replace("$" + var, val);
-            System.out.println("RAW: " + rawData + " || ");
-        }
 
         // get the tokens of the data
         String[] tokens = rawData.substring(2).split(" ");
 
-        // if this is a moment
+        // Manage time span
         if(rawData.charAt(0) == '.') {
             this.isSpan = false;
             this.endSeconds = startSeconds + 1;
@@ -58,13 +45,13 @@ public class ScheduledEvent implements Hoverable {
         this.startTime = tokens[0];
         this.endTime = tokens[1];
 
-        // set the name of the event
+        // get Class data
         String eventName = rawData.substring(rawData.indexOf("\""));
-        this.event = eventName.substring(0, eventName.length() - 1);
-
-        // set the color of the event
-        this.c = new Color(Integer.valueOf(tokens[2]), Integer.valueOf(tokens[3]), Integer.valueOf(tokens[4]), Integer.valueOf(tokens[5]));
+        String className = eventName.substring(0, eventName.length() - 1);
+        Color classColor = new Color(Integer.valueOf(tokens[2]), Integer.valueOf(tokens[3]), Integer.valueOf(tokens[4]), Integer.valueOf(tokens[5]));
         
+        trackedClass = new Class(className, classColor);
+
         // set the day location of the event
         this.startPercent = this.startSeconds / 86400.0;
         this.endPercent = this.endSeconds / 86400.0;
@@ -83,26 +70,23 @@ public class ScheduledEvent implements Hoverable {
         return new Rectangle(0, this.start + this.scheduleDisplayY, this.PREF_W, this.end - (this.start));
     }
 
+    public String getEventName() {
+        return this.trackedClass.name;
+    }
+    public Color getEventColor() {
+        return this.trackedClass.color;
+    }
+
     public void paint(java.awt.Graphics2D g2) {
-        g2.setColor(this.c);
-        g2.fill(this.getVisualBounds());
+        g2.setColor(getEventColor());
+        g2.fill(getVisualBounds());
         g2.setColor(Color.BLACK);
 
-        String textToDisplay = this.event.substring(1);
+        String textToDisplay = getEventName().substring(1);
         if(hovering)
             textToDisplay = startTime + " -> " + endTime;
 
         if (this.isSpan)
             g2.drawString(textToDisplay, 10, 5 + scheduleDisplayY + this.start + (this.end - this.start) / 2);
-    }
-
-    @Override
-    public void onHover(int mouseX, int mouseY) {
-        hovering = true;
-    }
-
-    @Override
-    public void onUnHover(int mouseX, int mouseY) {
-        hovering = false;
     }
 }
