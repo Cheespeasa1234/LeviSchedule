@@ -37,6 +37,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -69,18 +71,15 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
     // Define the screen size for math reasons
     public static final Dimension screenDimension = Toolkit.getDefaultToolkit().getScreenSize();
     public static final int screenW = (int) screenDimension.getWidth();
-    public static final int screenH = (int) screenDimension.getHeight();
+    public static final int screenH = (int) screenDimension.getHeight() - 200;
 
     // Define the window size
     public static final int PREF_W = 150;
     public static final int PREF_H = screenH + 100;
 
     // define the schedule display size
-    private int scheduleDisplayY = 200;
-    private int scheduleDisplayH = 500;
-
-    // define the tab open
-    private int tabIdx = 0;
+    private int scheduleDisplayY = 100;
+    private int scheduleDisplayH = 600;
 
     // Objects for the fonts
     private Font font;
@@ -166,16 +165,13 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
             len = lenSlider.getValue();
         });
 
-        // JButton openConfig = new JButton("Config");
-        // openConfig.addActionListener(e -> {
-        // ConfigPanel c = new ConfigPanel();
-        // // make a option dialog with Cancel and Save buttons
-        // Object[] options = { "Cancel", "Save" };
-        // int n = JOptionPane.showOptionDialog(this, c, "Config",
-        // JOptionPane.YES_NO_OPTION,
-        // JOptionPane.PLAIN_MESSAGE, null, options, options[0]);
-
-        // });
+        JButton openConfigButton = new JButton("Open Config");
+        openConfigButton.addActionListener(e -> {
+            JPanel configPanel = new ConfigPanel();
+            JOptionPane pane = new JOptionPane(configPanel);
+            JDialog dialog = pane.createDialog("Config");
+            dialog.setVisible(true);
+        });
 
         settingsGroup.add(new JLabel("Set opened schedule"));
         settingsGroup.add(switchSchedule);
@@ -183,7 +179,7 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
         settingsGroup.add(switchWeekType);
         settingsGroup.add(new JLabel("Set percent accuracy"));
         settingsGroup.add(lenSlider);
-        // settingsGroup.add(openConfig);
+        settingsGroup.add(openConfigButton);
         settingsGroup.setVisible(false);
 
         return settingsGroup;
@@ -245,9 +241,6 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
         System.out.println(configFile.getAbsolutePath());
         loadScopt(configFile);
         typeOfWeek = variables.get("opt_typeofweek");
-        System.out.println(typeOfWeek);
-        System.exit(0);
-
         // Load files / assets
         loadScopt(new File("schedules/classes.scopt"));
         loadToday(currentDate);
@@ -273,7 +266,7 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
             font = new Font("Cascadia Code", Font.PLAIN, 16);
             fontBold = new Font("Cascadia Code", Font.PLAIN, 16);
             fontSmall = new Font("Cascadia Code", Font.PLAIN, 10);
-            fontTiny = new Font("Cascadia Code", Font.PLAIN, 8);
+            fontTiny = new Font("Cascadia Code", Font.PLAIN, 10);
             fontMedium = new Font("Cascadia Code", Font.PLAIN, 12);
             // If the file wasn't found, or was incorrectly formatted:
         } catch (IOException | FontFormatException e) {
@@ -286,9 +279,10 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
         // get the three letter representation of the date
         if (currentDate == 7)
             currentDate = 0;
-        String dayToGet = daysOfWeek.get(currentDate).substring(0, 3).toLowerCase();
+        String dayToGet = daysOfWeek.get(currentDate).substring(0, 3).toUpperCase();
         // load the schedule
-        File f = new File("/schedules/" + typeOfWeek + ".sch");
+        File f = new File("schedules/" + typeOfWeek + ".sch");
+        System.out.println(f.getAbsolutePath());
         loadSch(f, dayToGet);
     }
 
@@ -336,7 +330,6 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
                 String line = mapReader.nextLine();
                 String[] tokens = line.split(" = ");
                 variables.put(tokens[0], tokens[1]);
-                line = mapReader.nextLine();
             }
 
             mapReader.close();
@@ -362,7 +355,9 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
                     break;
                 }
 
-                // if given var:
+                // PARSE THIS LINE
+                System.out.println("Found a line to parse!");
+
                 if (line.indexOf("$") > -1) {
                     String varName = line.substring(line.indexOf("$") + 1);
                     String val = variables.get(varName);
@@ -383,14 +378,9 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
 
     private double getPercentElapsed() {
         // Get the current date (precise)
-        java.util.Date now = new java.util.Date();
-        // Get the seconds, minutes, and hours
-        // TODO: find de-deprecated solution
-        double second = now.getSeconds();
-        double minute = now.getMinutes();
-        double hour = now.getHours();
+        double seconds = LocalTime.now().get(ChronoField.SECOND_OF_DAY);
         // Get the percent of the day that has passed
-        double percent = ((second + (minute * 60) + (hour * 3600))) / 86400;
+        double percent = seconds / 86400.0;
         return percent;
     }
 
@@ -407,7 +397,7 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
                 rewrite += (lastLine.startsWith(key) ? (key + " = " + value) : (lastLine)) + "\n";
                 lastLine = s.nextLine();
             }
-            Files.write(config.toPath(), (rewrite + "END").getBytes());
+            Files.write(config.toPath(), rewrite.getBytes());
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -483,6 +473,9 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
 
+        g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+
         // Set the default font
         g2.setFont(font);
 
@@ -491,19 +484,6 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
         g2.setPaint(backgroundPaint);
         g2.fill(new java.awt.Rectangle(0, 0, PREF_W, PREF_H));
         g2.setPaint(beforeGrad);
-
-        // Draw the tabs
-        int w = PREF_W / 3;
-        int h = 50;
-        for (int i = 0; i < 3; i++) {
-            int x = i * w;
-            int y = scheduleDisplayY - h;
-
-            // draw outline of left, right, and bottom sides
-            g2.drawLine(x, y + h, x + w, y + h);
-            g2.drawLine(x, y + h, x, y - h / 2);
-            g2.drawLine(x, y + h, x, y - h / 2);
-        }
 
         // Overlay for schedule area
         g2.setColor(new Color(255, 255, 255, 100));
