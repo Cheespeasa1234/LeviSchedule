@@ -1,56 +1,56 @@
-MON
-. 07:56 . $S
-< 10:00 10:27 $1
-< 10:31 11:00 $2
-< 11:04 11:31 $3
-< 11:35 12:02 $4
-< 12:06 12:53 $L
-< 12:57 13:23 $5
-< 13:27 13:53 $6
-< 13:57 14:23 $7
-< 14:27 14:53 $8
+STARTMON
+. 07:56 . $school_start
+< 10:00 10:27 $precalc
+< 10:31 11:00 $honors_physics
+< 11:04 11:31 $atcs
+< 11:35 12:02 $spanish_iv
+< 12:06 12:53 $lunch
+< 12:57 13:23 $honors_us_history_ii
+< 13:27 13:53 $honors_scifi
+< 13:57 14:23 $pascack_period
+< 14:27 14:53 $pe
 ENDMON
-TUE
-. 07:56 . $S
-< 10:00 10:36 $1
-< 10:40 11:18 $2
-< 11:22 11:58 $3
-< 12:02 12:53 $L
-< 12:57 13:33 $5
-< 13:37 14:13 $6
-< 14:17 14:53 $7
+STARTTUE
+. 07:56 . $school_start
+< 10:00 10:36 $precalc
+< 10:40 11:18 $honors_physics
+< 11:22 11:58 $atcs
+< 12:02 12:53 $lunch
+< 12:57 13:33 $honors_us_history_ii
+< 13:37 14:13 $honors_scifi
+< 14:17 14:53 $pascack_period
 ENDTUE
-WED
-. 07:56 . $S
-< 10:00 10:36 $4
-< 10:40 11:18 $1
-< 11:22 11:58 $2
-< 12:02 12:53 $L
-< 12:57 13:33 $8
-< 13:37 14:13 $5
-< 14:17 14:53 $6
+STARTWED
+. 07:56 . $school_start
+< 10:00 10:36 $spanish_iv
+< 10:40 11:18 $precalc
+< 11:22 11:58 $honors_physics
+< 12:02 12:53 $lunch
+< 12:57 13:33 $pe
+< 13:37 14:13 $honors_us_history_ii
+< 14:17 14:53 $honors_scifi
 ENDWED
-THU
-. 07:56 . $S
-< 10:00 10:36 $3
-< 10:40 11:18 $4
-< 11:22 11:58 $1
-< 12:02 12:53 $L
-< 12:57 13:33 $7
-< 13:37 14:13 $8
-< 14:17 14:53 $5
+STARTTHU
+. 07:56 . $school_start
+< 10:00 10:36 $atcs
+< 10:40 11:18 $spanish_iv
+< 11:22 11:58 $precalc
+< 12:02 12:53 $lunch
+< 12:57 13:33 $pascack_period
+< 13:37 14:13 $pe
+< 14:17 14:53 $honors_us_history_ii
 ENDTHU
-FRI
-. 07:56 . $S
-< 10:00 10:36 $2
-< 10:40 11:18 $3
-< 11:22 11:58 $4
-< 12:02 12:53 $L
-< 12:57 13:33 $6
-< 13:37 14:13 $7
-< 14:17 14:53 $8
+STARTFRI
+. 07:56 . $school_start
+< 10:00 10:36 $honors_physics
+< 10:40 11:18 $atcs
+< 11:22 11:58 $spanish_iv
+< 12:02 12:53 $lunch
+< 12:57 13:33 $honors_scifi
+< 13:37 14:13 $pascack_period
+< 14:17 14:53 $pe
 ENDFRI
-SAT
+STARTSAT
 ENDSAT
-SUN
+STARTSUN
 ENDSUN

@@ -1,0 +1,71 @@
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.GridLayout;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+
+public class JClassesList extends JPanel {
+
+    public ArrayList<JClassEntry> classes = new ArrayList<JClassEntry>();
+    boolean deleting = false;
+
+    /**
+     * Makes a panel for configuring the classes.
+     * 
+     * @param variables
+     *            The variables that can be modified. Will only modify variables
+     *            with FIVE parameters.
+     */
+    public JClassesList(HashMap<String, String> variables) {
+        setLayout(new GridLayout(0, 1));
+        // create a plus and minus pill
+
+        JPillButtonMember plus = new JPillButtonMember("+", 30, 30);
+        JPillButtonMember minus = new JPillButtonMember("-", 30, 30);
+        minus.addActionListener(e -> {
+            deleting = !deleting;
+        });
+
+        // add the plus and minus pill
+        JButton createDelete = new JButton();
+        createDelete.setPreferredSize(new Dimension(createDelete.getPreferredSize().width, 30));
+        createDelete.setLayout(new BorderLayout());
+        createDelete.add(plus, BorderLayout.WEST);
+        createDelete.add(minus, BorderLayout.EAST);
+
+        add(createDelete);
+
+        add(new JLabel("Configure Classes"));
+
+        for (String key : variables.keySet()) {
+            String[] params = LeviScheduleLoader.splitArgs(variables.get(key));
+            System.out.println("Params: " + variables.get(key));
+            if (params.length == 5) {
+                addClass(params);
+            }
+        }
+    }
+
+    public void addClass(String[] params) {
+        Color c = new Color(Integer.parseInt(params[0]), Integer.parseInt(params[1]),
+                Integer.parseInt(params[2]));
+
+        JTextField className = new JTextField(params[4]);
+
+        JButton color = new JButton("");
+        color.setBackground(c);
+
+        JClassEntry entry = new JClassEntry(className, color);
+        add(entry);
+        classes.add(entry);
+    }
+}

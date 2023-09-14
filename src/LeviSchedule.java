@@ -101,7 +101,8 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
     private String typeOfWeek = "default";
 
     // List the events and variables used in fs
-    private Array<ScheduledEvent> events = new Array<ScheduledEvent>();
+    private ArrayList<ArrayList<ScheduledEvent>> eventsFullWeek = new ArrayList<ArrayList<ScheduledEvent>>();
+    private ArrayList<ScheduledEvent> events = new ArrayList<ScheduledEvent>();
     private HashMap<String, String> variables = new HashMap<String, String>();
 
     // Will display text if we are looking at a different schedule than is today
@@ -152,11 +153,11 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
                 fileOpened = true;
                 openFileButton.setText("Close");
             }
-            setOption("opt_typeofweek", typeOfWeek);
+            LeviScheduleLoader.setOption("opt_typeofweek", typeOfWeek, variables);
         });
 
         JSlider lenSlider = new JSlider(4, 7, len);
-        lenSlider.setPreferredSize(new Dimension(100, 40));
+        lenSlider.setPreferredSize(new Dimension(100, 20));
         lenSlider.setMajorTickSpacing(1);
         lenSlider.setPaintTicks(true);
         lenSlider.setPaintLabels(true);
@@ -167,10 +168,12 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
 
         JButton openConfigButton = new JButton("Open Config");
         openConfigButton.addActionListener(e -> {
-            JPanel configPanel = new ConfigPanel();
-            JOptionPane pane = new JOptionPane(configPanel);
-            JDialog dialog = pane.createDialog("Config");
-            dialog.setVisible(true);
+            JPanel configPanel = new JConfigPanel(fontMedium);
+            // show a dialog with Save and Cancel buttons
+            int res = JOptionPane.showOptionDialog(null, configPanel, "Config", JOptionPane.DEFAULT_OPTION,
+                    JOptionPane.PLAIN_MESSAGE, null, new Object[] { "Save", "Cancel" }, "Cancel");
+            
+            
         });
 
         settingsGroup.add(new JLabel("Set opened schedule"));
@@ -222,8 +225,6 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
         this.addMouseMotionListener(this);
         this.addMouseListener(this);
 
-        this.setCursor(new Cursor(Cursor.CROSSHAIR_CURSOR));
-
         this.setLayout(lay);
 
         makeSettingsPanel();
@@ -239,10 +240,10 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
         // load settings
         File configFile = new File("schedules/config.scopt");
         System.out.println(configFile.getAbsolutePath());
-        loadScopt(configFile);
+        LeviScheduleLoader.loadScopt(configFile, variables);
         typeOfWeek = variables.get("opt_typeofweek");
         // Load files / assets
-        loadScopt(new File("schedules/classes.scopt"));
+        LeviScheduleLoader.loadScopt(new File("schedules/classes.scopt"), variables);
         loadToday(currentDate);
         loadAssets("src/fonts/CascadiaCode.ttf");
 
@@ -283,7 +284,7 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
         // load the schedule
         File f = new File("schedules/" + typeOfWeek + ".sch");
         System.out.println(f.getAbsolutePath());
-        loadSch(f, dayToGet);
+        LeviScheduleLoader.loadSch(f, dayToGet, events, scheduleDisplayH, scheduleDisplayY, PREF_W, variables);
     }
 
     // recursively sets the font value of a Component
@@ -315,66 +316,11 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
         // get the day code
         String dayCode = options[n].substring(0, 3).toLowerCase();
 
-        loadSch(selected, dayCode);
+        LeviScheduleLoader.loadSch(selected, dayCode, events, scheduleDisplayH, scheduleDisplayY, PREF_W, variables);
         viewing = selected.getName();
     }
 
-    // Load the class map, which represents your classes and their colors
-    private void loadScopt(File f) {
-        try {
-            // Set up scanner of the cmap
-            Scanner mapReader = new Scanner(f);
-
-            // Keep reading until we reach the end
-            while (mapReader.hasNextLine()) {
-                String line = mapReader.nextLine();
-                String[] tokens = line.split(" = ");
-                variables.put(tokens[0], tokens[1]);
-            }
-
-            mapReader.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    // Load a schedule file into the event storage
-    private void loadSch(File f, String dayCode) {
-        // clear the events in case this is during runtime
-        events.clear();
-        try {
-            boolean foundDayStart = false;
-            Scanner schedReader = new Scanner(f);
-            while (schedReader.hasNextLine()) {
-
-                String line = schedReader.nextLine();
-                if (!foundDayStart) {
-                    foundDayStart = line.equals(dayCode);
-                    continue;
-                } else if (foundDayStart && line.equals("END" + dayCode)) {
-                    break;
-                }
-
-                // PARSE THIS LINE
-                System.out.println("Found a line to parse!");
-
-                if (line.indexOf("$") > -1) {
-                    String varName = line.substring(line.indexOf("$") + 1);
-                    String val = variables.get(varName);
-                    line = line.replace("$" + varName, val);
-                }
-
-                // make the scheduled event
-                ScheduledEvent ev = new ScheduledEvent(line, scheduleDisplayH, variables);
-                ev.setGraphicsConstants(scheduleDisplayY, PREF_W);
-                events.add(ev);
-            }
-
-            schedReader.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-    }
+    
 
     private double getPercentElapsed() {
         // Get the current date (precise)
@@ -382,26 +328,6 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
         // Get the percent of the day that has passed
         double percent = seconds / 86400.0;
         return percent;
-    }
-
-    private void setOption(String key, String value) {
-        variables.put(key, value);
-        // get config file
-        File config = new File("schedules/config.scopt");
-        String rewrite = "";
-        Scanner s;
-        try {
-            s = new Scanner(config);
-            String lastLine = s.nextLine();
-            while (!lastLine.equals("END")) {
-                rewrite += (lastLine.startsWith(key) ? (key + " = " + value) : (lastLine)) + "\n";
-                lastLine = s.nextLine();
-            }
-            Files.write(config.toPath(), rewrite.getBytes());
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
     // The timer to update every second
@@ -419,7 +345,7 @@ public class LeviSchedule extends JPanel implements MouseMotionListener, MouseLi
         if (lastDate != currentDate) {
             // if this makes the new week
             if (currentDate == 7) {
-                setOption("opt_typeofweek", "default");
+                LeviScheduleLoader.setOption("opt_typeofweek", "default", variables);
                 typeOfWeek = "default";
             }
             // change the day
