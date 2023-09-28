@@ -2,6 +2,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,7 +17,8 @@ import javax.swing.JTextField;
 public class JClassesList extends JPanel {
 
     public ArrayList<JClassEntry> classes = new ArrayList<JClassEntry>();
-    boolean deleting = false;
+    private ActionListener onListChange;
+    private boolean deleting = false;
 
     /**
      * Makes a panel for configuring the classes.
@@ -25,7 +27,8 @@ public class JClassesList extends JPanel {
      *            The variables that can be modified. Will only modify variables
      *            with FIVE parameters.
      */
-    public JClassesList(HashMap<String, String> variables) {
+    public JClassesList(HashMap<String, String> variables, ActionListener onListChange) {
+        this.onListChange = onListChange;
         setLayout(new GridLayout(0, 1));
         // create a plus and minus pill
 
@@ -35,14 +38,23 @@ public class JClassesList extends JPanel {
             deleting = !deleting;
         });
 
-        // add the plus and minus pill
-        JButton createDelete = new JButton();
-        createDelete.setPreferredSize(new Dimension(createDelete.getPreferredSize().width, 30));
-        createDelete.setLayout(new BorderLayout());
-        createDelete.add(plus, BorderLayout.WEST);
-        createDelete.add(minus, BorderLayout.EAST);
+        JTextField newClassName = new JTextField("New Class");
+        JButton newClassColor = new JButton("");
+        JButton newClassAdd = new JButton("+");
+        newClassAdd.addActionListener(e -> {
+            String[] params = { 
+                "" + newClassColor.getBackground().getRed(),
+                "" + newClassColor.getBackground().getGreen(),
+                "" + newClassColor.getBackground().getBlue(), 
+                "" + newClassColor.getBackground().getAlpha(), "\"" + newClassName.getText() + "\"" 
+            };
 
-        add(createDelete);
+            addClass(params);
+        });
+        newClassAdd.addActionListener(onListChange);
+
+        JClassEntry newClass = new JClassEntry(newClassName, newClassColor, newClassAdd);
+        add(newClass);
 
         add(new JLabel("Configure Classes"));
 
@@ -61,11 +73,21 @@ public class JClassesList extends JPanel {
 
         JTextField className = new JTextField(params[4]);
 
-        JButton color = new JButton("");
-        color.setBackground(c);
+        JButton color = new JButton();
+        
+        JButton del = new JButton("-");
 
-        JClassEntry entry = new JClassEntry(className, color);
+        JClassEntry entry = new JClassEntry(className, color, del);
         add(entry);
         classes.add(entry);
+
+        del.addActionListener(e -> {
+            
+                remove(entry);
+                classes.remove(entry);
+                revalidate();
+                repaint();
+            
+        });
     }
 }

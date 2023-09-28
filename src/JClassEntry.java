@@ -12,9 +12,12 @@ public class JClassEntry extends JPanel {
 
     public boolean scared = false;
 
-    public JClassEntry(JTextField name, JButton color) {
+    public JClassEntry(JTextField name, JButton color, JButton action) {
         setLayout(new GridLayout(0, 2));
         add(name);
-        add(color);
+        JPanel btns = new JPanel();
+        btns.add(color);
+        btns.add(action);
+        add(btns);
     }
 }

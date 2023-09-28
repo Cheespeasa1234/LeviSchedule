@@ -83,8 +83,14 @@ public class JConfigPanel extends JPanel {
         rightGBC.gridy = 0;
         rightPanel.add(presetArea, rightGBC);
 
-        JClassesList classesList = new JClassesList(variables);
-        JScrollPane classesPane = new JScrollPane(classesList);
+        JScrollPane classesPane = new JScrollPane();
+        JClassesList classesList = new JClassesList(variables, e -> {
+            classesPane.revalidate();
+            classesPane.repaint();
+        });
+        classesPane.setViewportView(classesList);
+        classesPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        classesPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         rightGBC.gridy = 1;
         rightGBC.weighty = 0.75;
         rightPanel.add(classesPane, rightGBC);
